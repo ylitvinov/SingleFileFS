@@ -3,8 +3,8 @@ package org.fs.impl.streams;
 import java.io.IOException;
 
 /**
-* @author Yury Litvinov
-*/
+ * @author Yury Litvinov
+ */
 public class RandomAccessFileMock implements IRandomAccessFile {
     public final byte[] buffer;
 

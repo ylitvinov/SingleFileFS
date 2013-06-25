@@ -10,7 +10,7 @@ import static org.fest.assertions.Assertions.assertThat;
 public class CounterMapTest {
 
     @Test
-    public void testNormalUseCase(){
+    public void testNormalUseCase() {
         CounterMap<String> counter = new CounterMap<String>();
 
         assertThat(counter.getCount("a")).isEqualTo(0);

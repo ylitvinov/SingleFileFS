@@ -32,7 +32,7 @@ public class ChunkInputStreamTest {
         RandomAccessFileMock randomAccessFileMock = new RandomAccessFileMock(FileSystemImpl.CHUNK_SIZE * 2);
         ChunkInputStream outputStream = new ChunkInputStream(randomAccessFileMock, Arrays.asList(0, 1));
         int i = 0;
-        for (int j=0 ; j < FileSystemImpl.CHUNK_SIZE / 2; j++) {
+        for (int j = 0; j < FileSystemImpl.CHUNK_SIZE / 2; j++) {
             randomAccessFileMock.buffer[i++] = 1;
         }
         for (int j = 0; j < FileSystemImpl.CHUNK_SIZE / 2; j++) {
