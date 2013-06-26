@@ -19,22 +19,22 @@ class RandomAccessFileWrapper implements IRandomAccessFile {
     }
 
     @Override
-    public void write(int offset, byte[] data) throws IOException {
+    public synchronized void write(int offset, byte[] data) throws IOException {
         randomAccessFile.seek(offset);
         randomAccessFile.write(data);
     }
 
     @Override
-    public void read(int offset, byte[] data) throws IOException {
+    public synchronized void read(int offset, byte[] data) throws IOException {
         randomAccessFile.seek(offset);
         randomAccessFile.read(data);
     }
 
-    public boolean isNewFile() throws IOException {
+    public synchronized boolean isNewFile() throws IOException {
         return randomAccessFile.length() == 0;
     }
 
-    public void resizeFileToFitChunk(Integer chunkNumber) {
+    public synchronized void resizeFileToFitChunk(Integer chunkNumber) {
         long requiredLength = (chunkNumber + 1) * FileSystemImpl.CHUNK_SIZE;
         try {
             long currentLength = randomAccessFile.length();
