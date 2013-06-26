@@ -51,6 +51,9 @@ public class FileSystemImpl implements ISingleFileFS {
         if (fileId == null) {
             throw new IOException("File with name '" + fileName + "' is not found");
         }
+        if(filesWrites.getCount(fileId) > 0){
+            throw new IOException("Someone is currently writing to this file");
+        }
         filesReads.increase(fileId);
         return createInputStream(fileId);
     }
@@ -87,8 +90,7 @@ public class FileSystemImpl implements ISingleFileFS {
 
     @Override
     public void flushMetadata() throws IOException {
-        // we don't want any changes being made to metadata during flushing so we make write access to
-        // chunksMetadataHandler and fileNamesKeeper being always synchronized
+        // we don't want any changes being made to metadata during flushing
         synchronized (metadataLock) {
             // removing chunks for FileNames structure
             chunksMetadataHandler.releaseChunks(FileNamesKeeper.RESERVED_ID_FOR_FILE_NAMES);
@@ -159,7 +161,7 @@ public class FileSystemImpl implements ISingleFileFS {
             @Override
             public Integer allocateNewChunk() {
                 if (invoked) {
-                    throw new IllegalStateException("Metadata does not fit into single chunk. This should never happen since we should prevent too many files creation from API");
+                    throw new IllegalStateException("Metadata does not fit into single chunk. This is a limitation of the current prototype");
                 }
                 invoked = true;
                 return MetadataHandler.METADATA_CHUNK_NUMBER;

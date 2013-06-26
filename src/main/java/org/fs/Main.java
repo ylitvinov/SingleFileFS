@@ -10,6 +10,8 @@ public class Main {
         File file = getNewFile();
         write(file);
         read(file);
+        read(file);
+        delete(file);
     }
 
     private static void write(File file) throws IOException {
@@ -27,6 +29,13 @@ public class Main {
         InputStream inputStream = fileSystem.readFile("test");
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
         System.out.println(reader.readLine());
+        fileSystem.flushMetadata();
+    }
+
+    private static void delete(File file) throws IOException {
+        ISingleFileFS fileSystem = FileSystemFactory.create(file);
+        fileSystem.deleteFile("test");
+        fileSystem.flushMetadata();
     }
 
     private static File getNewFile() {

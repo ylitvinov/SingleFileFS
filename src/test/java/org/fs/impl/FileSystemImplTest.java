@@ -121,41 +121,57 @@ public class FileSystemImplTest {
     }
 
     @Test(expected = IOException.class)
-    public void testWriteLockUnreleased() throws IOException {
+    public void testReadWhenWriteLockUnreleased() throws IOException {
         OutputStream outStream = fileSystem.writeFile("a.txt");
         String expected = "Hello world";
         outStream.write(expected.getBytes());
 
-        // outStream is not closed, so we should no be able to remove it
-        fileSystem.deleteFile("a.txt");
+        fileSystem.readFile("a.txt");
     }
 
     @Test()
-    public void testWriteLockReleased() throws IOException {
+    public void testReadWhenWriteLockReleased() throws IOException {
         OutputStream outStream = fileSystem.writeFile("a.txt");
         String expected = "Hello world";
         outStream.write(expected.getBytes());
         outStream.close();
 
-        // outStream is not closed, so we should no be able to remove it
+        fileSystem.readFile("a.txt");
+    }
+
+    @Test(expected = IOException.class)
+    public void testDeleteWhenWriteLockUnreleased() throws IOException {
+        OutputStream outStream = fileSystem.writeFile("a.txt");
+        String expected = "Hello world";
+        outStream.write(expected.getBytes());
+
+        fileSystem.deleteFile("a.txt");
+    }
+
+    @Test()
+    public void testDeleteWhenWriteLockReleased() throws IOException {
+        OutputStream outStream = fileSystem.writeFile("a.txt");
+        String expected = "Hello world";
+        outStream.write(expected.getBytes());
+        outStream.close();
+
         fileSystem.deleteFile("a.txt");
     }
 
     @Test(expected = IOException.class)
-    public void testReadLockUnreleased() throws IOException {
+    public void testDeleteWhenReadLockUnreleased() throws IOException {
         OutputStream outStream = fileSystem.writeFile("a.txt");
         String expected = "Hello world";
         outStream.write(expected.getBytes());
         outStream.close();
 
-        InputStream inStream = fileSystem.readFile("a.txt");
+        fileSystem.readFile("a.txt");
 
-        // inStream is not closed, so we should no be able to remove it
         fileSystem.deleteFile("a.txt");
     }
 
     @Test()
-    public void testReadLockReleased() throws IOException {
+    public void testDeleteWhenReadLockReleased() throws IOException {
         OutputStream outStream = fileSystem.writeFile("a.txt");
         String expected = "Hello world";
         outStream.write(expected.getBytes());
@@ -164,7 +180,6 @@ public class FileSystemImplTest {
         InputStream inStream = fileSystem.readFile("a.txt");
         inStream.close();
 
-        // inStream is not closed, so we should no be able to remove it
         fileSystem.deleteFile("a.txt");
     }
 
