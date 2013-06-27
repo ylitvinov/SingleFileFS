@@ -33,13 +33,13 @@ public interface ISingleFileFS {
      * Return content input stream for the given file.
      *
      * @param fileName file name
-     * @return Input stream which should be closed at the end of readed to let file become deletable.
+     * @return Input stream which should be closed at the end of reading to let file become deletable.
      * @throws IOException if file does not exist or file is currently being written.
      */
     InputStream readFile(String fileName) throws IOException;
 
     /**
-     * Delete given file from file system
+     * Delete given file from file the system
      *
      * @param fileName file name
      * @throws IOException if file does not exist or file is currently being read or written.
@@ -48,7 +48,7 @@ public interface ISingleFileFS {
 
     /**
      * Saves all changes made to metadata (file creation, file deletion) to disk.
-     * Without flushing metadata is not saved and you won't see created file, as well as deleted file might me corrupted.
+     * Without flushing metadata you might loose newly created files and have some deleted files being corrupted.
      *
      * @throws IOException if some io error occurs during flushing
      */
