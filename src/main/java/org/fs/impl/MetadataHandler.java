@@ -69,14 +69,14 @@ public class MetadataHandler {
         return newChunk;
     }
 
-    public synchronized void releaseChunks(Integer fileId) {
-        for (Integer chunkId : getFileNameChunks(fileId)) {
+    public synchronized void releaseChunksForFile(Integer fileId) {
+        for (Integer chunkId : getChunksForFile(fileId)) {
             chunksAllocation.clear(chunkId);
         }
         fileIdToChunks.remove(fileId);
     }
 
-    public synchronized List<Integer> getFileNameChunks(Integer fileId) {
+    public synchronized List<Integer> getChunksForFile(Integer fileId) {
         return Collections.unmodifiableList(fileIdToChunks.getSafe(fileId));
     }
 }

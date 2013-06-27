@@ -84,7 +84,7 @@ public class FileSystemImpl implements ISingleFileFS {
         // make sure that we don't flush at the moment
         synchronized (metadataLock) {
             fileNamesKeeper.remove(fileName);
-            chunksMetadataHandler.releaseChunks(fileId);
+            chunksMetadataHandler.releaseChunksForFile(fileId);
         }
     }
 
@@ -93,7 +93,7 @@ public class FileSystemImpl implements ISingleFileFS {
         // we don't want any changes being made to metadata during flushing
         synchronized (metadataLock) {
             // removing chunks for FileNames structure
-            chunksMetadataHandler.releaseChunks(FileNamesKeeper.RESERVED_ID_FOR_FILE_NAMES);
+            chunksMetadataHandler.releaseChunksForFile(FileNamesKeeper.RESERVED_ID_FOR_FILE_NAMES);
             // write FileNames structure
             fileNamesKeeper.write(createOutputStream(FileNamesKeeper.RESERVED_ID_FOR_FILE_NAMES));
             // write metadata to the first chunk
@@ -124,7 +124,7 @@ public class FileSystemImpl implements ISingleFileFS {
     }
 
     private ChunkInputStream createInputStream(final Integer fileId) {
-        List<Integer> chunkNumbers = chunksMetadataHandler.getFileNameChunks(fileId);
+        List<Integer> chunkNumbers = chunksMetadataHandler.getChunksForFile(fileId);
         return new ChunkInputStream(randomAccessFile, chunkNumbers) {
             boolean closed = false;
 

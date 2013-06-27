@@ -1,5 +1,6 @@
 package org.fs.impl;
 
+import org.fs.common.ThreadSafe;
 import org.fs.impl.streams.IRandomAccessFile;
 
 import java.io.File;
@@ -10,6 +11,7 @@ import java.io.RandomAccessFile;
 /**
  * @author Yury Litvinov
  */
+@ThreadSafe
 class RandomAccessFileWrapper implements IRandomAccessFile {
 
     private final RandomAccessFile randomAccessFile;

@@ -16,16 +16,16 @@ public class MetadataHandlerTest {
     public void testAllocateReleaseGet() {
         MetadataHandler metadataHandler = new MetadataHandler();
 
-        Assertions.assertThat(metadataHandler.getFileNameChunks(1)).isEmpty();
+        Assertions.assertThat(metadataHandler.getChunksForFile(1)).isEmpty();
 
         metadataHandler.allocateNewChunkForFile(1);
         metadataHandler.allocateNewChunkForFile(2);
         metadataHandler.allocateNewChunkForFile(1);
-        Assertions.assertThat(metadataHandler.getFileNameChunks(1)).containsExactly(1, 3);
+        Assertions.assertThat(metadataHandler.getChunksForFile(1)).containsExactly(1, 3);
 
-        metadataHandler.releaseChunks(1);
-        Assertions.assertThat(metadataHandler.getFileNameChunks(1)).isEmpty();
-        Assertions.assertThat(metadataHandler.getFileNameChunks(2)).containsExactly(2);
+        metadataHandler.releaseChunksForFile(1);
+        Assertions.assertThat(metadataHandler.getChunksForFile(1)).isEmpty();
+        Assertions.assertThat(metadataHandler.getChunksForFile(2)).containsExactly(2);
     }
 
     @Test
@@ -40,7 +40,7 @@ public class MetadataHandlerTest {
 
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
         metadataHandler = new MetadataHandler(byteArrayInputStream);
-        Assertions.assertThat(metadataHandler.getFileNameChunks(1)).containsExactly(1);
-        Assertions.assertThat(metadataHandler.getFileNameChunks(2)).containsExactly(2, 3);
+        Assertions.assertThat(metadataHandler.getChunksForFile(1)).containsExactly(1);
+        Assertions.assertThat(metadataHandler.getChunksForFile(2)).containsExactly(2, 3);
     }
 }
