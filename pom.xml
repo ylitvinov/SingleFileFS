@@ -1,6 +1,6 @@
 <project>
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.jetbrains.file-fs</groupId>
+    <groupId>org.fs</groupId>
     <artifactId>SingleFileFS</artifactId>
     <packaging>jar</packaging>
     <version>1.0</version>
@@ -64,13 +64,6 @@
             <version>1.9.0</version>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.4</version>
-            <scope>test</scope>
-        </dependency>
         <!-- (end) Libraries for tests (end) -->
 
         <!-- Logging -->
@@ -88,8 +81,6 @@
             <optional>true</optional>
         </dependency>
         <!-- (end) Logging (end) -->
-
     </dependencies>
-
 
 </project>
