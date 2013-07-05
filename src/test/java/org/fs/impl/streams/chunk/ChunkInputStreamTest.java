@@ -1,7 +1,10 @@
-package org.fs.impl.streams;
+package org.fs.impl.streams.chunk;
 
 import org.fest.assertions.Assertions;
 import org.fs.impl.FileSystemImpl;
+import org.fs.impl.streams.RandomAccessFileMock;
+import org.fs.impl.streams.chunk.ChunkInputStream;
+import org.fs.impl.streams.chunk.ChunkOutputStream;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -15,15 +18,12 @@ public class ChunkInputStreamTest {
     @Test
     public void testSingleChunk() throws IOException {
         byte[] bytes = new byte[FileSystemImpl.CHUNK_SIZE];
-        bytes[0] = 0;
-        bytes[1] = 0;
-        bytes[2] = 1;
-        bytes[3] = ByteEncoder.EOF.getFirst();
-        bytes[4] = ByteEncoder.EOF.getSecond();
-        bytes[5] = 0;
+        bytes[0] = 1;
+        bytes[1] = 2;
+        bytes[2] = ChunkOutputStream.EOF;
         ChunkInputStream inputStream = new ChunkInputStream(new RandomAccessFileMock(bytes), Arrays.asList(0));
-        Assertions.assertThat(inputStream.read()).isEqualTo(0);
         Assertions.assertThat(inputStream.read()).isEqualTo(1);
+        Assertions.assertThat(inputStream.read()).isEqualTo(2);
         Assertions.assertThat(inputStream.read()).isEqualTo(-1);
     }
 
@@ -41,8 +41,7 @@ public class ChunkInputStreamTest {
         for (int j = 0; j < FileSystemImpl.CHUNK_SIZE / 2; j++) {
             randomAccessFileMock.buffer[i++] = 3;
         }
-        randomAccessFileMock.buffer[i++] = ByteEncoder.EOF.getFirst();
-        randomAccessFileMock.buffer[i] = ByteEncoder.EOF.getSecond();
+        randomAccessFileMock.buffer[i] = ChunkOutputStream.EOF;
 
         Assertions.assertThat(outputStream.read()).isEqualTo((byte) 1);
         outputStream.skip(FileSystemImpl.CHUNK_SIZE / 2 - 2);

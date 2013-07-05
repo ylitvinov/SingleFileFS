@@ -2,7 +2,8 @@ package org.fs.impl;
 
 import org.fs.common.ThreadSafe;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,44 +13,18 @@ import java.util.Map;
  * @author Yury Litvinov
  */
 @ThreadSafe
-public class FileNamesKeeper {
+public class FileNamesKeeper implements Serializable {
 
     public static final int RESERVED_ID_FOR_FILE_NAMES = -1;
-    private final Map<String, Integer> names = new HashMap<String, Integer>();
+    private Map<String, Integer> names;
     private int maxFileId = 0;
 
     public FileNamesKeeper() {
+        init();
     }
 
-    public FileNamesKeeper(InputStream inputStream) {
-        try {
-            read(inputStream);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to read file names. File system is corrupted", e);
-        }
-    }
-
-    private void read(InputStream inputStream) throws IOException {
-        ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
-        int count = objectInputStream.readInt();
-        for (int i = 0; i < count; i++) {
-            String name = objectInputStream.readUTF();
-            int fileId = objectInputStream.readInt();
-            names.put(name, fileId);
-            if (fileId > maxFileId) {
-                maxFileId = fileId;
-            }
-        }
-    }
-
-    public synchronized void write(OutputStream outputStream) throws IOException {
-        ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-        objectOutputStream.writeInt(names.size());
-        for (Map.Entry<String, Integer> stringIntegerEntry : names.entrySet()) {
-            objectOutputStream.writeUTF(stringIntegerEntry.getKey());
-            objectOutputStream.writeInt(stringIntegerEntry.getValue());
-        }
-        objectOutputStream.close();
+    private void init() {
+        names = new HashMap<String, Integer>();
     }
 
     public synchronized Integer getFileId(String fileName) {
@@ -67,5 +42,26 @@ public class FileNamesKeeper {
         int value = ++maxFileId;
         names.put(fileName, value);
         return value;
+    }
+
+    private void writeObject(java.io.ObjectOutputStream objectOutputStream) throws IOException {
+        objectOutputStream.writeInt(names.size());
+        for (Map.Entry<String, Integer> entry : names.entrySet()) {
+            objectOutputStream.writeUTF(entry.getKey());
+            objectOutputStream.writeInt(entry.getValue());
+        }
+    }
+
+    private void readObject(java.io.ObjectInputStream objectInputStream) throws IOException, ClassNotFoundException {
+        init();
+        int count = objectInputStream.readInt();
+        for (int i = 0; i < count; i++) {
+            String name = objectInputStream.readUTF();
+            int fileId = objectInputStream.readInt();
+            names.put(name, fileId);
+            if (fileId > maxFileId) {
+                maxFileId = fileId;
+            }
+        }
     }
 }

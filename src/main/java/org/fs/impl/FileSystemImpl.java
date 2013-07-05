@@ -3,13 +3,12 @@ package org.fs.impl;
 import org.fs.ISingleFileFS;
 import org.fs.common.CounterMap;
 import org.fs.common.ThreadSafe;
-import org.fs.impl.streams.ChunkInputStream;
-import org.fs.impl.streams.ChunkOutputStream;
+import org.fs.impl.streams.chunk.ChunkInputStream;
+import org.fs.impl.streams.chunk.ChunkOutputStream;
+import org.fs.impl.streams.screening.ScreeningInputStream;
+import org.fs.impl.streams.screening.ScreeningOutputStream;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,13 +34,17 @@ public class FileSystemImpl implements ISingleFileFS {
             chunksMetadataHandler = new MetadataHandler();
             fileNamesKeeper = new FileNamesKeeper();
         } else {
-            // reading chunks metadata
-            ChunkInputStream metadataStream = createMetadataInputStream();
-            chunksMetadataHandler = new MetadataHandler(metadataStream);
+            try {
+                // reading chunks metadata
+                ObjectInputStream metadataStream = createMetadataInputStream();
+                chunksMetadataHandler = (MetadataHandler) metadataStream.readObject();
 
-            // reading file names
-            ChunkInputStream filesNamesInputStream = createInputStream(FileNamesKeeper.RESERVED_ID_FOR_FILE_NAMES);
-            fileNamesKeeper = new FileNamesKeeper(filesNamesInputStream);
+                // reading file names
+                InputStream filesNamesInputStream = createInputStream(FileNamesKeeper.RESERVED_ID_FOR_FILE_NAMES);
+                fileNamesKeeper = (FileNamesKeeper) new ObjectInputStream(filesNamesInputStream).readObject();
+            } catch (ClassNotFoundException e) {
+                throw new IOException(e);
+            }
         }
     }
 
@@ -51,7 +54,7 @@ public class FileSystemImpl implements ISingleFileFS {
         if (fileId == null) {
             throw new IOException("File with name '" + fileName + "' is not found");
         }
-        if(filesWrites.getCount(fileId) > 0){
+        if (filesWrites.getCount(fileId) > 0) {
             throw new IOException("Someone is currently writing to this file");
         }
         filesReads.increase(fileId);
@@ -94,14 +97,20 @@ public class FileSystemImpl implements ISingleFileFS {
         synchronized (metadataLock) {
             // removing chunks for FileNames structure
             chunksMetadataHandler.releaseChunksForFile(FileNamesKeeper.RESERVED_ID_FOR_FILE_NAMES);
+
             // write FileNames structure
-            fileNamesKeeper.write(createOutputStream(FileNamesKeeper.RESERVED_ID_FOR_FILE_NAMES));
-            // write metadata to the first chunk
-            chunksMetadataHandler.write(createMetadataOutputStream());
+            ObjectOutputStream fileObjectInputStream = new ObjectOutputStream(createOutputStream(FileNamesKeeper.RESERVED_ID_FOR_FILE_NAMES));
+            fileObjectInputStream.writeObject(fileNamesKeeper);
+            fileObjectInputStream.close();
+
+            // write metadata
+            ObjectOutputStream metadataOutputStream = createMetadataOutputStream();
+            metadataOutputStream.writeObject(chunksMetadataHandler);
+            metadataOutputStream.close();
         }
     }
 
-    private ChunkOutputStream createOutputStream(final Integer fileId) {
+    private ScreeningOutputStream createOutputStream(final Integer fileId) {
         ChunkOutputStream.ChunksAllocator chunksAllocator = new ChunkOutputStream.ChunksAllocator() {
             @Override
             public Integer allocateNewChunk() {
@@ -112,7 +121,7 @@ public class FileSystemImpl implements ISingleFileFS {
                 }
             }
         };
-        return new ChunkOutputStream(randomAccessFile, chunksAllocator) {
+        ChunkOutputStream chunkOutputStream = new ChunkOutputStream(randomAccessFile, chunksAllocator) {
             @Override
             public synchronized void close() throws IOException {
                 synchronized (FileSystemImpl.this) {
@@ -121,11 +130,12 @@ public class FileSystemImpl implements ISingleFileFS {
                 super.close();
             }
         };
+        return new ScreeningOutputStream(chunkOutputStream, ChunkOutputStream.EOF);
     }
 
-    private ChunkInputStream createInputStream(final Integer fileId) {
+    private ScreeningInputStream createInputStream(final Integer fileId) {
         List<Integer> chunkNumbers = chunksMetadataHandler.getChunksForFile(fileId);
-        return new ChunkInputStream(randomAccessFile, chunkNumbers) {
+        ChunkInputStream chunkInputStream = new ChunkInputStream(randomAccessFile, chunkNumbers) {
             boolean closed = false;
 
             @Override
@@ -148,14 +158,16 @@ public class FileSystemImpl implements ISingleFileFS {
                 super.close();
             }
         };
+        return new ScreeningInputStream(chunkInputStream, ChunkOutputStream.EOF);
     }
 
-    private ChunkInputStream createMetadataInputStream() {
-        return new ChunkInputStream(randomAccessFile, Arrays.asList(MetadataHandler.METADATA_CHUNK_NUMBER));
+    private ObjectInputStream createMetadataInputStream() throws IOException {
+        ChunkInputStream chunkInputStream = new ChunkInputStream(randomAccessFile, Arrays.asList(MetadataHandler.METADATA_CHUNK_NUMBER));
+        return new ObjectInputStream(new ScreeningInputStream(chunkInputStream, ChunkOutputStream.EOF));
     }
 
-    private ChunkOutputStream createMetadataOutputStream() {
-        return new ChunkOutputStream(randomAccessFile, new ChunkOutputStream.ChunksAllocator() {
+    private ObjectOutputStream createMetadataOutputStream() throws IOException {
+        ChunkOutputStream chunkOutputStream = new ChunkOutputStream(randomAccessFile, new ChunkOutputStream.ChunksAllocator() {
             boolean invoked;
 
             @Override
@@ -167,6 +179,7 @@ public class FileSystemImpl implements ISingleFileFS {
                 return MetadataHandler.METADATA_CHUNK_NUMBER;
             }
         });
+        return new ObjectOutputStream(new ScreeningOutputStream(chunkOutputStream, ChunkOutputStream.EOF));
     }
 
 }

@@ -1,4 +1,4 @@
-package org.fs.impl.streams;
+package org.fs.impl.streams.chunk;
 
 import java.io.IOException;
 

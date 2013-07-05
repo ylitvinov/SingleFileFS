@@ -3,9 +3,7 @@ package org.fs.impl;
 import org.fest.assertions.Assertions;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
 
 /**
  * @author Yury Litvinov
@@ -29,17 +27,21 @@ public class MetadataHandlerTest {
     }
 
     @Test
-    public void testReadWrite() throws IOException {
+    public void testSerialization() throws IOException, ClassNotFoundException {
         MetadataHandler metadataHandler = new MetadataHandler();
         metadataHandler.allocateNewChunkForFile(1);
         metadataHandler.allocateNewChunkForFile(2);
         metadataHandler.allocateNewChunkForFile(2);
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        metadataHandler.write(byteArrayOutputStream);
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
+        objectOutputStream.writeObject(metadataHandler);
+        objectOutputStream.close();
 
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
-        metadataHandler = new MetadataHandler(byteArrayInputStream);
+        ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
+        metadataHandler = (MetadataHandler) objectInputStream.readObject();
+
         Assertions.assertThat(metadataHandler.getChunksForFile(1)).containsExactly(1);
         Assertions.assertThat(metadataHandler.getChunksForFile(2)).containsExactly(2, 3);
     }

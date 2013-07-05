@@ -3,7 +3,8 @@ package org.fs.impl;
 import org.fs.common.MultiValueMap;
 import org.fs.common.ThreadSafe;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.Serializable;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
@@ -12,54 +13,20 @@ import java.util.List;
  * @author Yury Litvinov
  */
 @ThreadSafe
-public class MetadataHandler {
+public class MetadataHandler implements Serializable {
 
     public static final int METADATA_CHUNK_NUMBER = 0;
-    private final BitSet chunksAllocation = new BitSet();
-
-    {
-        chunksAllocation.set(METADATA_CHUNK_NUMBER);
-    }
-
-    private final MultiValueMap<Integer, Integer> fileIdToChunks = new MultiValueMap<Integer, Integer>();
+    private BitSet chunksAllocation;
+    private MultiValueMap<Integer, Integer> fileIdToChunks;
 
     public MetadataHandler() {
+        init();
     }
 
-    public MetadataHandler(InputStream inputStream) {
-        try {
-            read(inputStream);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to metadata. File system was corrupted", e);
-        }
-    }
-
-    private void read(InputStream inputStream) throws IOException {
-        DataInputStream dataInputStream = new DataInputStream(inputStream);
-        int numberOfEntries = dataInputStream.readInt();
-        for (int i = 0; i < numberOfEntries; i++) {
-            int fileId = dataInputStream.readInt();
-            int numberOfChunks = dataInputStream.readInt();
-            for (int j = 0; j < numberOfChunks; j++) {
-                int chunkNumber = dataInputStream.readInt();
-                fileIdToChunks.put(fileId, chunkNumber);
-                chunksAllocation.set(chunkNumber);
-            }
-        }
-    }
-
-    public synchronized void write(OutputStream outputStream) throws IOException {
-        DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
-        dataOutputStream.writeInt(fileIdToChunks.getKeys().size());
-        for (Integer fileId : fileIdToChunks.getKeys()) {
-            dataOutputStream.writeInt(fileId);
-            List<Integer> values = fileIdToChunks.getSafe(fileId);
-            dataOutputStream.writeInt(values.size());
-            for (Integer value : values) {
-                dataOutputStream.writeInt(value);
-            }
-        }
-        dataOutputStream.close();
+    private void init() {
+        chunksAllocation = new BitSet();
+        chunksAllocation.set(METADATA_CHUNK_NUMBER);
+        fileIdToChunks = new MultiValueMap<Integer, Integer>();
     }
 
     public synchronized int allocateNewChunkForFile(Integer fileId) {
@@ -78,5 +45,31 @@ public class MetadataHandler {
 
     public synchronized List<Integer> getChunksForFile(Integer fileId) {
         return Collections.unmodifiableList(fileIdToChunks.getSafe(fileId));
+    }
+
+    private void writeObject(java.io.ObjectOutputStream dataOutputStream) throws IOException {
+        dataOutputStream.writeInt(fileIdToChunks.getKeys().size());
+        for (Integer fileId : fileIdToChunks.getKeys()) {
+            dataOutputStream.writeInt(fileId);
+            List<Integer> values = fileIdToChunks.getSafe(fileId);
+            dataOutputStream.writeInt(values.size());
+            for (Integer value : values) {
+                dataOutputStream.writeInt(value);
+            }
+        }
+    }
+
+    private void readObject(java.io.ObjectInputStream dataInputStream) throws IOException, ClassNotFoundException {
+        init();
+        int numberOfEntries = dataInputStream.readInt();
+        for (int i = 0; i < numberOfEntries; i++) {
+            int fileId = dataInputStream.readInt();
+            int numberOfChunks = dataInputStream.readInt();
+            for (int j = 0; j < numberOfChunks; j++) {
+                int chunkNumber = dataInputStream.readInt();
+                fileIdToChunks.put(fileId, chunkNumber);
+                chunksAllocation.set(chunkNumber);
+            }
+        }
     }
 }

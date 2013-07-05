@@ -1,7 +1,7 @@
 package org.fs.impl;
 
 import org.fs.common.ThreadSafe;
-import org.fs.impl.streams.IRandomAccessFile;
+import org.fs.impl.streams.chunk.IRandomAccessFile;
 
 import java.io.File;
 import java.io.FileNotFoundException;

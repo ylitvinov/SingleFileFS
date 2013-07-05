@@ -108,7 +108,7 @@ public class FileSystemImplTest {
 
     @Test(expected = IllegalStateException.class)
     public void testTooManyFiles() throws IOException {
-        int filesNumber = 200;
+        int filesNumber = 500;
         for (int i = 0; i < filesNumber; i++) {
             OutputStream outStream = fileSystem.writeFile("a" + i);
             String expected = "Hello world";

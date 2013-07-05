@@ -1,4 +1,4 @@
-package org.fs.impl.streams;
+package org.fs.impl.streams.chunk;
 
 import org.fs.common.ThreadSafe;
 import org.fs.impl.FileSystemImpl;
@@ -16,10 +16,9 @@ public class ChunkInputStream extends InputStream {
     private final IRandomAccessFile randomAccessFile;
     private final List<Integer> chunkNumbers;
 
-    private final ByteDecoder decoder = new ByteDecoder();
-    private final byte[] currentChunkData = new byte[FileSystemImpl.CHUNK_SIZE];
-    private int currentChunk = 0;
-    private int currentPosition = 0;
+    private byte[] chunkData = new byte[FileSystemImpl.CHUNK_SIZE];
+    private int currentChunk;
+    private int currentPosition;
 
     public ChunkInputStream(IRandomAccessFile randomAccessFile, List<Integer> chunkNumbers) {
         this.randomAccessFile = randomAccessFile;
@@ -28,28 +27,27 @@ public class ChunkInputStream extends InputStream {
 
     @Override
     public synchronized int read() throws IOException {
-        if (decoder.isEOF() || isEOF()) {
+        if (isEOF()) {
             return -1;
         }
-        decoder.readFirstByte(readEncoded());
-        if (decoder.requiresSecondByte()) {
-            decoder.readSecondByte(readEncoded());
-            if (decoder.isEOF()) {
-                return -1;
-            }
+        int value = readInt();
+        if (value == ChunkOutputStream.EOF) {
+            return -1;
         }
-        return decoder.getValue() & 0xff;
+        return value;
     }
 
-    private boolean isEOF() {
-        return currentChunk == chunkNumbers.size() && currentPosition == FileSystemImpl.CHUNK_SIZE;
-    }
-
-    private byte readEncoded() throws IOException {
+    private int readInt() throws IOException {
         if (currentPosition == 0 || currentPosition == FileSystemImpl.CHUNK_SIZE) {
             fill();
         }
-        return currentChunkData[currentPosition++];
+        byte b = chunkData[currentPosition++];
+        return b & 0xff;
+    }
+
+    private boolean isEOF() {
+        return chunkData == null
+                || currentChunk == chunkNumbers.size() && currentPosition == FileSystemImpl.CHUNK_SIZE;
     }
 
     private void fill() throws IOException {
@@ -58,11 +56,16 @@ public class ChunkInputStream extends InputStream {
         }
         int chunkNumber = chunkNumbers.get(currentChunk++);
         currentPosition = 0;
-        randomAccessFile.read(chunkNumber * FileSystemImpl.CHUNK_SIZE, currentChunkData);
+        randomAccessFile.read(chunkNumber * FileSystemImpl.CHUNK_SIZE, chunkData);
     }
 
     @Override
     public boolean markSupported() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void close() throws IOException {
+        chunkData = null;
     }
 }

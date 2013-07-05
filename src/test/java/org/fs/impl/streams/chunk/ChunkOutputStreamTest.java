@@ -1,7 +1,9 @@
-package org.fs.impl.streams;
+package org.fs.impl.streams.chunk;
 
 import org.fest.assertions.Assertions;
 import org.fs.impl.FileSystemImpl;
+import org.fs.impl.streams.ChunkAllocatorMock;
+import org.fs.impl.streams.RandomAccessFileMock;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -15,18 +17,14 @@ public class ChunkOutputStreamTest {
     public void testSingleChunk() throws IOException {
         RandomAccessFileMock randomAccessFileMock = new RandomAccessFileMock(FileSystemImpl.CHUNK_SIZE);
         ChunkOutputStream outputStream = new ChunkOutputStream(randomAccessFileMock, new ChunkAllocatorMock());
-        outputStream.write(0);
-        outputStream.flush();
         outputStream.write(1);
+        outputStream.flush();
+        outputStream.write(2);
         outputStream.close();
 
-        Assertions.assertThat(randomAccessFileMock.buffer[0]).isEqualTo((byte) 0);
-        Assertions.assertThat(randomAccessFileMock.buffer[1]).isEqualTo((byte) 0);
-        Assertions.assertThat(randomAccessFileMock.buffer[2]).isEqualTo((byte) 1);
-        Assertions.assertThat(randomAccessFileMock.buffer[3]).isEqualTo((byte) 0);
-        Assertions.assertThat(randomAccessFileMock.buffer[4]).isEqualTo((byte) 1);
-        Assertions.assertThat(randomAccessFileMock.buffer[5]).isEqualTo((byte) 0);
-        Assertions.assertThat(randomAccessFileMock.buffer[6]).isEqualTo((byte) 0);
+        Assertions.assertThat(randomAccessFileMock.buffer[0]).isEqualTo((byte) 1);
+        Assertions.assertThat(randomAccessFileMock.buffer[1]).isEqualTo((byte) 2);
+        Assertions.assertThat(randomAccessFileMock.buffer[2]).isEqualTo((byte) ChunkOutputStream.EOF);
     }
 
     @Test
@@ -50,8 +48,7 @@ public class ChunkOutputStreamTest {
         Assertions.assertThat(randomAccessFileMock.buffer[FileSystemImpl.CHUNK_SIZE - 1]).isEqualTo((byte) 2);
         Assertions.assertThat(randomAccessFileMock.buffer[FileSystemImpl.CHUNK_SIZE]).isEqualTo((byte) 3);
         Assertions.assertThat(randomAccessFileMock.buffer[FileSystemImpl.CHUNK_SIZE + FileSystemImpl.CHUNK_SIZE / 2 - 1]).isEqualTo((byte) 3);
-        Assertions.assertThat(randomAccessFileMock.buffer[FileSystemImpl.CHUNK_SIZE + FileSystemImpl.CHUNK_SIZE / 2]).isEqualTo((byte) 0);
-        Assertions.assertThat(randomAccessFileMock.buffer[FileSystemImpl.CHUNK_SIZE * 2 - 1]).isEqualTo((byte) 0);
+        Assertions.assertThat(randomAccessFileMock.buffer[FileSystemImpl.CHUNK_SIZE + FileSystemImpl.CHUNK_SIZE / 2]).isEqualTo((byte) ChunkOutputStream.EOF);
     }
 
 }

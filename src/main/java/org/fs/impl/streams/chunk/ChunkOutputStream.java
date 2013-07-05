@@ -1,4 +1,4 @@
-package org.fs.impl.streams;
+package org.fs.impl.streams.chunk;
 
 import org.fs.common.ThreadSafe;
 import org.fs.impl.FileSystemImpl;
@@ -11,11 +11,12 @@ import java.io.OutputStream;
  */
 @ThreadSafe
 public class ChunkOutputStream extends OutputStream {
+    public static final int EOF = 0;
+
     private final IRandomAccessFile randomAccessFile;
     private final ChunksAllocator chunksAllocator;
 
-    private final ByteEncoder encoder = new ByteEncoder();
-    private final byte[] chunkData = new byte[FileSystemImpl.CHUNK_SIZE];
+    private byte[] chunkData = new byte[FileSystemImpl.CHUNK_SIZE];
     private int position;
     private Integer currentChunkNumber;
 
@@ -26,19 +27,10 @@ public class ChunkOutputStream extends OutputStream {
 
     @Override
     public synchronized void write(int b) throws IOException {
-        byte value = (byte) b;
-        encoder.encode(value);
-        writeEncoded(encoder.firstByte());
-        if (encoder.requiresSecondByte()) {
-            writeEncoded(encoder.secondByte());
-        }
-    }
-
-    private void writeEncoded(byte value) throws IOException {
         if (currentChunkNumber == null) {
             currentChunkNumber = chunksAllocator.allocateNewChunk();
         }
-        chunkData[position++] = value;
+        chunkData[position++] = (byte) b;
         if (position >= FileSystemImpl.CHUNK_SIZE) {
             flush();
         }
@@ -46,6 +38,9 @@ public class ChunkOutputStream extends OutputStream {
 
     @Override
     public synchronized void flush() throws IOException {
+        if (currentChunkNumber == null) {
+            return;
+        }
         int currentChunkNumberSaved = currentChunkNumber;
         if (position >= FileSystemImpl.CHUNK_SIZE) {
             position = 0;
@@ -60,9 +55,9 @@ public class ChunkOutputStream extends OutputStream {
 
     @Override
     public synchronized void close() throws IOException {
-        writeEncoded(ByteEncoder.EOF.getFirst());
-        writeEncoded(ByteEncoder.EOF.getSecond());
+        write(EOF);
         flush();
+        chunkData = null;
     }
 
     public interface ChunksAllocator {

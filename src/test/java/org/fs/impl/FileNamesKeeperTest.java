@@ -3,9 +3,7 @@ package org.fs.impl;
 import org.fest.assertions.Assertions;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
 
 /**
  * @author Yury Litvinov
@@ -27,7 +25,7 @@ public class FileNamesKeeperTest {
     }
 
     @Test
-    public void testWriteRead() throws IOException {
+    public void testSerialization() throws IOException, ClassNotFoundException {
         FileNamesKeeper fileNamesKeeper = new FileNamesKeeper();
         fileNamesKeeper.add("file1");
         fileNamesKeeper.add("file2");
@@ -35,10 +33,14 @@ public class FileNamesKeeperTest {
         Assertions.assertThat(fileNamesKeeper.getFileId("file2")).isEqualTo(2);
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        fileNamesKeeper.write(byteArrayOutputStream);
 
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
-        fileNamesKeeper = new FileNamesKeeper(byteArrayInputStream);
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
+        objectOutputStream.writeObject(fileNamesKeeper);
+        objectOutputStream.close();
+
+        ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
+        fileNamesKeeper = (FileNamesKeeper) objectInputStream.readObject();
+
         Assertions.assertThat(fileNamesKeeper.getFileId("file1")).isEqualTo(1);
         Assertions.assertThat(fileNamesKeeper.getFileId("file2")).isEqualTo(2);
     }

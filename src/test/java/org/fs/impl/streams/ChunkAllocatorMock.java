@@ -1,12 +1,14 @@
 package org.fs.impl.streams;
 
+import org.fs.impl.streams.chunk.ChunkOutputStream;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * @author Yury Litvinov
  */
-class ChunkAllocatorMock implements ChunkOutputStream.ChunksAllocator {
+public class ChunkAllocatorMock implements ChunkOutputStream.ChunksAllocator {
     private int idx = 0;
 
     @Override

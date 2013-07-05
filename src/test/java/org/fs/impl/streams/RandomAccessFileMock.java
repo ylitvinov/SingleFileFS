@@ -1,5 +1,7 @@
 package org.fs.impl.streams;
 
+import org.fs.impl.streams.chunk.IRandomAccessFile;
+
 import java.io.IOException;
 
 /**
