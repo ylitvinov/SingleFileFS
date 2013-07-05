@@ -6,6 +6,7 @@ import org.fs.ISingleFileFS;
 import java.io.*;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author Yury Litvinov
@@ -13,23 +14,30 @@ import java.util.concurrent.CountDownLatch;
 public class ContentionTest {
 
     private static final int NUMBER_OF_THREADS = 100;
-    private static final int NUMBER_OF_FILES = 10;
-    private static final int DURATION = 20;
+    private static final int NUMBER_OF_FILES = 100;
+    private static final int DURATION = 100000;
 
     private final ISingleFileFS fileSystem;
-    private final CountDownLatch countDownLatch = new CountDownLatch(NUMBER_OF_THREADS);
+    private final CountDownLatch start = new CountDownLatch(NUMBER_OF_THREADS);
+    private final CountDownLatch end = new CountDownLatch(NUMBER_OF_THREADS);
+
+    private final AtomicLong errors = new AtomicLong();
+    private final AtomicLong successful = new AtomicLong();
 
     public ContentionTest(ISingleFileFS fileSystem) {
         this.fileSystem = fileSystem;
     }
 
-    public void runTest() {
+    public void runTest() throws InterruptedException {
         for (int i = 0; i < NUMBER_OF_THREADS; i++) {
             new Tester().start();
         }
+        end.await();
+        System.out.println("Successful operations: " + successful.get());
+        System.out.println("Errors: " + errors.get());
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         ISingleFileFS fileSystem = FileSystemFactory.create(createNewFile());
         new ContentionTest(fileSystem).runTest();
     }
@@ -43,6 +51,7 @@ public class ContentionTest {
             waitOthers();
             for (int i = 0; i < DURATION; i++) {
                 write(nextRandFile());
+                write(nextRandFile());
                 read(nextRandFile());
                 read(nextRandFile());
                 read(nextRandFile());
@@ -50,7 +59,9 @@ public class ContentionTest {
                 read(nextRandFile());
                 read(nextRandFile());
                 delete(nextRandFile());
+                flush();
             }
+            end.countDown();
         }
 
         private void write(int id) {
@@ -59,7 +70,9 @@ public class ContentionTest {
                 String message = "Hello mister '" + id + "'!";
                 outputStream.write(message.getBytes());
                 outputStream.close();
+                successful.incrementAndGet();
             } catch (IOException e) {
+                errors.incrementAndGet();
                 System.out.println(e.getMessage());
             }
         }
@@ -69,8 +82,9 @@ public class ContentionTest {
                 InputStream inputStream = fileSystem.readFile(id + ".txt");
                 BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
                 reader.readLine();
-                fileSystem.flushMetadata();
+                successful.incrementAndGet();
             } catch (IOException e) {
+                errors.incrementAndGet();
                 System.out.println(e.getMessage());
             }
         }
@@ -78,16 +92,27 @@ public class ContentionTest {
         private void delete(int id) {
             try {
                 fileSystem.deleteFile(id + ".txt");
-                fileSystem.flushMetadata();
+                successful.incrementAndGet();
             } catch (IOException e) {
+                errors.incrementAndGet();
+                System.out.println(e.getMessage());
+            }
+        }
+
+        private void flush() {
+            try {
+                fileSystem.flushMetadata();
+                successful.incrementAndGet();
+            } catch (IOException e) {
+                errors.incrementAndGet();
                 System.out.println(e.getMessage());
             }
         }
 
         private void waitOthers() {
-            countDownLatch.countDown();
+            start.countDown();
             try {
-                countDownLatch.await();
+                start.await();
             } catch (InterruptedException e) {
                 throw new IllegalStateException(e);
             }
