@@ -11,7 +11,7 @@ import java.io.*;
 public class FileNamesKeeperTest {
 
     @Test
-    public void testGetAddRemove() {
+    public void testGetAddRemoveHas() {
         FileNamesKeeper fileNamesKeeper = new FileNamesKeeper();
         fileNamesKeeper.add("file1");
         fileNamesKeeper.add("file2");
@@ -21,7 +21,7 @@ public class FileNamesKeeperTest {
         Assertions.assertThat(fileNamesKeeper.getFileId("file1")).isEqualTo(1);
 
         fileNamesKeeper.remove("file1");
-        Assertions.assertThat(fileNamesKeeper.getFileId("file1")).isNull();
+        Assertions.assertThat(fileNamesKeeper.hasFile("file1")).isFalse();
     }
 
     @Test

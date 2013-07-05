@@ -61,6 +61,6 @@ public class ChunkOutputStream extends OutputStream {
     }
 
     public interface ChunksAllocator {
-        Integer allocateNewChunk();
+        int allocateNewChunk();
     }
 }

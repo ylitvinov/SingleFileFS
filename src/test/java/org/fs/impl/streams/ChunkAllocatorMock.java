@@ -12,7 +12,7 @@ public class ChunkAllocatorMock implements ChunkOutputStream.ChunksAllocator {
     private int idx = 0;
 
     @Override
-    public Integer allocateNewChunk() {
+    public int allocateNewChunk() {
         return idx++;
     }
 

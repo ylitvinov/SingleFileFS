@@ -4,6 +4,8 @@ import org.fs.common.MultiValueMap;
 import org.fs.common.ThreadSafe;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.BitSet;
 import java.util.Collections;
@@ -29,25 +31,25 @@ public class MetadataHandler implements Serializable {
         fileIdToChunks = new MultiValueMap<Integer, Integer>();
     }
 
-    public synchronized int allocateNewChunkForFile(Integer fileId) {
+    public synchronized int allocateNewChunkForFile(int fileId) {
         int newChunk = chunksAllocation.nextClearBit(0);
         chunksAllocation.set(newChunk);
         fileIdToChunks.put(fileId, newChunk);
         return newChunk;
     }
 
-    public synchronized void releaseChunksForFile(Integer fileId) {
+    public synchronized void releaseChunksForFile(int fileId) {
         for (Integer chunkId : getChunksForFile(fileId)) {
             chunksAllocation.clear(chunkId);
         }
         fileIdToChunks.remove(fileId);
     }
 
-    public synchronized List<Integer> getChunksForFile(Integer fileId) {
+    public synchronized List<Integer> getChunksForFile(int fileId) {
         return Collections.unmodifiableList(fileIdToChunks.getSafe(fileId));
     }
 
-    private void writeObject(java.io.ObjectOutputStream dataOutputStream) throws IOException {
+    private void writeObject(ObjectOutputStream dataOutputStream) throws IOException {
         dataOutputStream.writeInt(fileIdToChunks.getKeys().size());
         for (Integer fileId : fileIdToChunks.getKeys()) {
             dataOutputStream.writeInt(fileId);
@@ -59,7 +61,7 @@ public class MetadataHandler implements Serializable {
         }
     }
 
-    private void readObject(java.io.ObjectInputStream dataInputStream) throws IOException, ClassNotFoundException {
+    private void readObject(ObjectInputStream dataInputStream) throws IOException, ClassNotFoundException {
         init();
         int numberOfEntries = dataInputStream.readInt();
         for (int i = 0; i < numberOfEntries; i++) {

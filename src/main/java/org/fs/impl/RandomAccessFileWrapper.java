@@ -36,7 +36,7 @@ class RandomAccessFileWrapper implements IRandomAccessFile {
         return randomAccessFile.length() == 0;
     }
 
-    public synchronized void resizeFileToFitChunk(Integer chunkNumber) {
+    public synchronized void resizeFileToFitChunk(int chunkNumber) {
         long requiredLength = (chunkNumber + 1) * FileSystemImpl.CHUNK_SIZE;
         try {
             long currentLength = randomAccessFile.length();

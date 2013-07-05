@@ -50,10 +50,10 @@ public class FileSystemImpl implements ISingleFileFS {
 
     @Override
     public synchronized InputStream readFile(String fileName) throws IOException {
-        Integer fileId = fileNamesKeeper.getFileId(fileName);
-        if (fileId == null) {
+        if (!fileNamesKeeper.hasFile(fileName)) {
             throw new IOException("File with name '" + fileName + "' is not found");
         }
+        int fileId = fileNamesKeeper.getFileId(fileName);
         if (filesWrites.getCount(fileId) > 0) {
             throw new IOException("Someone is currently writing to this file");
         }
@@ -63,20 +63,20 @@ public class FileSystemImpl implements ISingleFileFS {
 
     @Override
     public synchronized OutputStream writeFile(String fileName) throws IOException {
-        if (fileNamesKeeper.getFileId(fileName) != null) {
+        if (fileNamesKeeper.hasFile(fileName)) {
             throw new IOException("File '" + fileName + "' already exists");
         }
-        final Integer fileId = fileNamesKeeper.add(fileName);
+        int fileId = fileNamesKeeper.add(fileName);
         filesWrites.increase(fileId);
         return createOutputStream(fileId);
     }
 
     @Override
     public synchronized void deleteFile(String fileName) throws IOException {
-        Integer fileId = fileNamesKeeper.getFileId(fileName);
-        if (fileId == null) {
+        if (!fileNamesKeeper.hasFile(fileName)) {
             throw new IOException("File with name '" + fileName + "' does not exist in file system");
         }
+        int fileId = fileNamesKeeper.getFileId(fileName);
         if (filesReads.getCount(fileId) > 0) {
             throw new IOException("File is opened for reading");
         }
@@ -110,10 +110,10 @@ public class FileSystemImpl implements ISingleFileFS {
         }
     }
 
-    private ScreeningOutputStream createOutputStream(final Integer fileId) {
+    private ScreeningOutputStream createOutputStream(final int fileId) {
         ChunkOutputStream.ChunksAllocator chunksAllocator = new ChunkOutputStream.ChunksAllocator() {
             @Override
-            public Integer allocateNewChunk() {
+            public int allocateNewChunk() {
                 synchronized (metadataLock) {
                     int chunkNumber = chunksMetadataHandler.allocateNewChunkForFile(fileId);
                     randomAccessFile.resizeFileToFitChunk(chunkNumber);
@@ -133,7 +133,7 @@ public class FileSystemImpl implements ISingleFileFS {
         return new ScreeningOutputStream(chunkOutputStream, ChunkOutputStream.EOF);
     }
 
-    private ScreeningInputStream createInputStream(final Integer fileId) {
+    private ScreeningInputStream createInputStream(final int fileId) {
         List<Integer> chunkNumbers = chunksMetadataHandler.getChunksForFile(fileId);
         ChunkInputStream chunkInputStream = new ChunkInputStream(randomAccessFile, chunkNumbers) {
             boolean closed = false;
@@ -171,7 +171,7 @@ public class FileSystemImpl implements ISingleFileFS {
             boolean invoked;
 
             @Override
-            public Integer allocateNewChunk() {
+            public int allocateNewChunk() {
                 if (invoked) {
                     throw new IllegalStateException("Metadata does not fit into single chunk. This is a limitation of the current prototype");
                 }

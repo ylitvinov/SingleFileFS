@@ -3,6 +3,8 @@ package org.fs.impl;
 import org.fs.common.ThreadSafe;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +29,14 @@ public class FileNamesKeeper implements Serializable {
         names = new HashMap<String, Integer>();
     }
 
-    public synchronized Integer getFileId(String fileName) {
+    public synchronized boolean hasFile(String fileName) {
+        return names.containsKey(fileName);
+    }
+
+    public synchronized int getFileId(String fileName) {
+        if (!names.containsKey(fileName)) {
+            throw new IllegalArgumentException();
+        }
         return names.get(fileName);
     }
 
@@ -35,7 +44,7 @@ public class FileNamesKeeper implements Serializable {
         names.remove(fileName);
     }
 
-    public synchronized Integer add(String fileName) {
+    public synchronized int add(String fileName) {
         if (names.containsKey(fileName)) {
             return names.get(fileName);
         }
@@ -44,7 +53,7 @@ public class FileNamesKeeper implements Serializable {
         return value;
     }
 
-    private void writeObject(java.io.ObjectOutputStream objectOutputStream) throws IOException {
+    private void writeObject(ObjectOutputStream objectOutputStream) throws IOException {
         objectOutputStream.writeInt(names.size());
         for (Map.Entry<String, Integer> entry : names.entrySet()) {
             objectOutputStream.writeUTF(entry.getKey());
@@ -52,7 +61,7 @@ public class FileNamesKeeper implements Serializable {
         }
     }
 
-    private void readObject(java.io.ObjectInputStream objectInputStream) throws IOException, ClassNotFoundException {
+    private void readObject(ObjectInputStream objectInputStream) throws IOException, ClassNotFoundException {
         init();
         int count = objectInputStream.readInt();
         for (int i = 0; i < count; i++) {
