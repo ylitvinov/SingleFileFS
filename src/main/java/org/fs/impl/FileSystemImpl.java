@@ -92,7 +92,7 @@ public class FileSystemImpl implements ISingleFileFS {
     }
 
     @Override
-    public void flushMetadata() throws IOException {
+    public synchronized void flushMetadata() throws IOException {
         // we don't want any changes being made to metadata during flushing
         synchronized (metadataLock) {
             // removing chunks for FileNames structure

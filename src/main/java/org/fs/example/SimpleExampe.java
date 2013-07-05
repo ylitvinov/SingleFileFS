@@ -1,13 +1,16 @@
-package org.fs;
+package org.fs.example;
+
+import org.fs.FileSystemFactory;
+import org.fs.ISingleFileFS;
 
 import java.io.*;
 
 /**
  * @author Yury Litvinov
  */
-public class Main {
+public class SimpleExampe {
     public static void main(String[] args) throws IOException {
-        File file = getNewFile();
+        File file = createNewFile();
         write(file);
         read(file);
         read(file);
@@ -38,7 +41,7 @@ public class Main {
         fileSystem.flushMetadata();
     }
 
-    private static File getNewFile() {
+    private static File createNewFile() {
         File file = new File("test.fs");
         file.delete();
         return file;
