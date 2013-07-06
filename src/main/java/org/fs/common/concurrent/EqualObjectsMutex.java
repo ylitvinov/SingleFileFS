@@ -12,7 +12,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * (in terms of '==' operation) but equal (in terms of #equals() operation).
  * <p/>
  * For example you need a per-file synchronize access to files in your file system but clients don't have
- * "same" objects they can synchronize on ({@code new File("a.txt") != new File("a.txt")}), but rather have only equal objects ({@code new File("a.txt").equals(new File("a.txt")}) == true).
+ * "same" objects they can synchronize on ({@code new File("a.txt") != new File("a.txt")}), but rather have only equal
+ * objects ({@code new File("a.txt").equals(new File("a.txt")}) == true).
  * <p/>
  * If you use mutexes returned from this class, you can use usual synchronized{} block.
  * <p/>
@@ -23,7 +24,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * File file = ..
  * synchronized (mutexes.get(file)){
  *    ... // synchronized access to 'file' and
- *        // all other File instances which equal (#equals()) to 'file'
+ *        // all other File instances equal (#equals()) to 'file'
  * }
  * </pre></blockquote>
  * Note, that you don't need to do any release or unlock operations, mutexes which have been requested previously
