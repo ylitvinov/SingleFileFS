@@ -6,8 +6,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Keeps map from file name to file id.
@@ -18,42 +19,44 @@ import java.util.Map;
 public class FileNamesKeeper implements Serializable {
 
     public static final int RESERVED_ID_FOR_FILE_NAMES = -1;
-    private Map<String, Integer> names;
-    private int maxFileId = 0;
+    private ConcurrentHashMap<String, Integer> names;
+    private AtomicInteger maxFileId;
 
     public FileNamesKeeper() {
         init();
     }
 
     private void init() {
-        names = new HashMap<String, Integer>();
+        maxFileId = new AtomicInteger(0);
+        names = new ConcurrentHashMap<String, Integer>();
     }
 
-    public synchronized boolean hasFile(String fileName) {
+    public boolean hasFile(String fileName) {
         return names.containsKey(fileName);
     }
 
-    public synchronized int getFileId(String fileName) {
-        if (!names.containsKey(fileName)) {
+    public int getFileId(String fileName) {
+        Integer fileId = names.get(fileName);
+        if (fileId == null) {
             throw new IllegalArgumentException();
         }
         return names.get(fileName);
     }
 
-    public synchronized void remove(String fileName) {
+    public void remove(String fileName) {
         names.remove(fileName);
     }
 
-    public synchronized int add(String fileName) {
-        if (names.containsKey(fileName)) {
-            return names.get(fileName);
+    public int add(String fileName) {
+        // This is safe, since #add() should never be called with the same fileName simultaneously
+        if (!names.containsKey(fileName)) {
+            names.put(fileName, maxFileId.incrementAndGet());
         }
-        int value = ++maxFileId;
-        names.put(fileName, value);
-        return value;
+        return names.get(fileName);
     }
 
     private void writeObject(ObjectOutputStream objectOutputStream) throws IOException {
+        objectOutputStream.writeInt(maxFileId.get());
         objectOutputStream.writeInt(names.size());
         for (Map.Entry<String, Integer> entry : names.entrySet()) {
             objectOutputStream.writeUTF(entry.getKey());
@@ -63,14 +66,12 @@ public class FileNamesKeeper implements Serializable {
 
     private void readObject(ObjectInputStream objectInputStream) throws IOException, ClassNotFoundException {
         init();
+        maxFileId.set(objectInputStream.readInt());
         int count = objectInputStream.readInt();
         for (int i = 0; i < count; i++) {
             String name = objectInputStream.readUTF();
             int fileId = objectInputStream.readInt();
             names.put(name, fileId);
-            if (fileId > maxFileId) {
-                maxFileId = fileId;
-            }
         }
     }
 }
