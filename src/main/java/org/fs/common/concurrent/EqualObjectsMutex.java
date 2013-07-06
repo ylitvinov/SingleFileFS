@@ -24,7 +24,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *    ...
  * }
  * </pre></blockquote>
- * Note, that you don't need to do any release or unlock operations.
+ * Note, that you don't need to do any release or unlock operations, mutexes which have been requested previously
+ * and not used anymore will be deleted during one of the GC runs.
  *
  * @author Yury Litvinov
  */
@@ -32,6 +33,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class EqualObjectsMutex<T> {
 
     private final WeakHashMap<T, WeakReference<T>> mutexes = new WeakHashMap<T, WeakReference<T>>();
+
+    // Since WeakHashMap is not thread-safe, we have to restrict write access to it.
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public Object getMutex(T key) {
