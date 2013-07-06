@@ -4,6 +4,8 @@ import org.fs.common.ThreadSafe;
 
 import java.lang.ref.WeakReference;
 import java.util.WeakHashMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * This class is intended to use when you need to synchronize access to multiple objects which are not same
@@ -30,25 +32,37 @@ import java.util.WeakHashMap;
 public class EqualObjectsMutex<T> {
 
     private final WeakHashMap<T, WeakReference<T>> mutexes = new WeakHashMap<T, WeakReference<T>>();
-    private final Object lock = new Object();
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public Object getMutex(T key) {
-        WeakReference reference = mutexes.get(key);
-        Object monitor = getMonitor(reference);
+        Object monitor = getMonitor(key);
         if (monitor == null) {
-            synchronized (lock) {
-                monitor = getMonitor(reference);
-                if (monitor == null) {
-                    monitor = key;
-                    mutexes.put(key, new WeakReference<T>(key));
-                }
-                return monitor;
-            }
+            return setMonitor(key);
         }
         return monitor;
     }
 
-    private Object getMonitor(WeakReference reference) {
-        return reference == null ? null : reference.get();
+    private Object getMonitor(T key) {
+        lock.readLock().lock();
+        try {
+            WeakReference reference = mutexes.get(key);
+            return reference == null ? null : reference.get();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    private Object setMonitor(T key) {
+        lock.writeLock().lock();
+        try {
+            Object monitor = getMonitor(key);
+            if (monitor == null) {
+                monitor = key;
+                mutexes.put(key, new WeakReference<T>(key));
+            }
+            return monitor;
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 }
