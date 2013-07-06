@@ -5,12 +5,12 @@ import java.util.HashMap;
 /**
  * @author Yury Litvinov
  */
-@NotThreadSafe
+@ThreadSafe
 public class CounterMap<K> {
 
     private final HashMap<K, Integer> map = new HashMap<K, Integer>();
 
-    public void increase(K key) {
+    public synchronized void increase(K key) {
         Integer counter = map.get(key);
         if (counter != null) {
             map.put(key, counter + 1);
@@ -19,7 +19,7 @@ public class CounterMap<K> {
         }
     }
 
-    public void decrease(K key) {
+    public synchronized void decrease(K key) {
         Integer counter = map.get(key);
         if (counter != null) {
             if (counter == 1) {

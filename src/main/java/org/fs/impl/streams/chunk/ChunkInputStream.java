@@ -65,7 +65,7 @@ public class ChunkInputStream extends InputStream {
     }
 
     @Override
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
         chunkData = null;
     }
 }

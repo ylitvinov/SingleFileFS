@@ -3,6 +3,7 @@ package org.fs.impl;
 import org.fs.ISingleFileFS;
 import org.fs.common.CounterMap;
 import org.fs.common.ThreadSafe;
+import org.fs.common.concurrent.EqualObjectsMutex;
 import org.fs.impl.streams.chunk.ChunkInputStream;
 import org.fs.impl.streams.chunk.ChunkOutputStream;
 import org.fs.impl.streams.screening.ScreeningInputStream;
@@ -27,6 +28,7 @@ public class FileSystemImpl implements ISingleFileFS {
     private final CounterMap<Integer> filesReads = new CounterMap<Integer>();
     private final CounterMap<Integer> filesWrites = new CounterMap<Integer>();
     private final Object metadataLock = new Object();
+    private final EqualObjectsMutex<String> mutexes = new EqualObjectsMutex<String>();
 
     public FileSystemImpl(File file) throws IOException {
         this.randomAccessFile = new RandomAccessFileWrapper(file);
@@ -49,50 +51,59 @@ public class FileSystemImpl implements ISingleFileFS {
     }
 
     @Override
-    public synchronized InputStream readFile(String fileName) throws IOException {
-        if (!fileNamesKeeper.hasFile(fileName)) {
-            throw new IOException("File with name '" + fileName + "' is not found");
-        }
-        int fileId = fileNamesKeeper.getFileId(fileName);
-        if (filesWrites.getCount(fileId) > 0) {
-            throw new IOException("Someone is currently writing to this file");
-        }
-        filesReads.increase(fileId);
-        return createInputStream(fileId);
-    }
-
-    @Override
-    public synchronized OutputStream writeFile(String fileName) throws IOException {
-        if (fileNamesKeeper.hasFile(fileName)) {
-            throw new IOException("File '" + fileName + "' already exists");
-        }
-        int fileId = fileNamesKeeper.add(fileName);
-        filesWrites.increase(fileId);
-        return createOutputStream(fileId);
-    }
-
-    @Override
-    public synchronized void deleteFile(String fileName) throws IOException {
-        if (!fileNamesKeeper.hasFile(fileName)) {
-            throw new IOException("File with name '" + fileName + "' does not exist in file system");
-        }
-        int fileId = fileNamesKeeper.getFileId(fileName);
-        if (filesReads.getCount(fileId) > 0) {
-            throw new IOException("File is opened for reading");
-        }
-        if (filesWrites.getCount(fileId) > 0) {
-            throw new IOException("File is opened for writing");
-        }
-
-        // make sure that we don't flush at the moment
-        synchronized (metadataLock) {
-            fileNamesKeeper.remove(fileName);
-            chunksMetadataHandler.releaseChunksForFile(fileId);
+    public InputStream readFile(String fileName) throws IOException {
+        checkArguments(fileName);
+        synchronized (mutexes.getMutex(fileName)) {
+            if (!fileNamesKeeper.hasFile(fileName)) {
+                throw new IOException("File with name '" + fileName + "' is not found");
+            }
+            int fileId = fileNamesKeeper.getFileId(fileName);
+            if (filesWrites.getCount(fileId) > 0) {
+                throw new IOException("Someone is currently writing to this file");
+            }
+            filesReads.increase(fileId);
+            return createInputStream(fileId);
         }
     }
 
     @Override
-    public synchronized void flushMetadata() throws IOException {
+    public OutputStream writeFile(String fileName) throws IOException {
+        checkArguments(fileName);
+        synchronized (mutexes.getMutex(fileName)) {
+            if (fileNamesKeeper.hasFile(fileName)) {
+                throw new IOException("File '" + fileName + "' already exists");
+            }
+            int fileId = fileNamesKeeper.add(fileName);
+            filesWrites.increase(fileId);
+            return createOutputStream(fileId);
+        }
+    }
+
+    @Override
+    public void deleteFile(String fileName) throws IOException {
+        checkArguments(fileName);
+        synchronized (mutexes.getMutex(fileName)) {
+            if (!fileNamesKeeper.hasFile(fileName)) {
+                throw new IOException("File with name '" + fileName + "' does not exist in file system");
+            }
+            int fileId = fileNamesKeeper.getFileId(fileName);
+            if (filesReads.getCount(fileId) > 0) {
+                throw new IOException("File is opened for reading");
+            }
+            if (filesWrites.getCount(fileId) > 0) {
+                throw new IOException("File is opened for writing");
+            }
+
+            // make sure that we don't flush at the moment
+            synchronized (metadataLock) {
+                fileNamesKeeper.remove(fileName);
+                chunksMetadataHandler.releaseChunksForFile(fileId);
+            }
+        }
+    }
+
+    @Override
+    public void flushMetadata() throws IOException {
         // we don't want any changes being made to metadata during flushing
         synchronized (metadataLock) {
             // removing chunks for FileNames structure
@@ -124,9 +135,7 @@ public class FileSystemImpl implements ISingleFileFS {
         ChunkOutputStream chunkOutputStream = new ChunkOutputStream(randomAccessFile, chunksAllocator) {
             @Override
             public synchronized void close() throws IOException {
-                synchronized (FileSystemImpl.this) {
-                    filesWrites.decrease(fileId);
-                }
+                filesWrites.decrease(fileId);
                 super.close();
             }
         };
@@ -148,13 +157,11 @@ public class FileSystemImpl implements ISingleFileFS {
             }
 
             @Override
-            public void close() throws IOException {
-                synchronized (FileSystemImpl.this) {
+            public synchronized void close() throws IOException {
                     if (!closed) {
                         filesReads.decrease(fileId);
                     }
                     closed = true;
-                }
                 super.close();
             }
         };
@@ -180,6 +187,12 @@ public class FileSystemImpl implements ISingleFileFS {
             }
         });
         return new ObjectOutputStream(new ScreeningOutputStream(chunkOutputStream, ChunkOutputStream.EOF));
+    }
+
+    private void checkArguments(String fileName) {
+        if (fileName == null) {
+            throw new IllegalArgumentException("File name could no be null");
+        }
     }
 
 }

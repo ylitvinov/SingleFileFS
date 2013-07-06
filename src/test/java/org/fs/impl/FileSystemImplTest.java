@@ -26,6 +26,21 @@ public class FileSystemImplTest {
         fileSystem = new FileSystemImpl(file);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testReadNull() throws IOException {
+        fileSystem.readFile(null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testWriteNull() throws IOException {
+        fileSystem.writeFile(null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testDeleteNull() throws IOException {
+        fileSystem.deleteFile(null);
+    }
+
     @Test(expected = IOException.class)
     public void testReadNonExisting() throws IOException {
         fileSystem.readFile("a.txt");
