@@ -22,7 +22,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * ...
  * File file = ..
  * synchronized (mutexes.get(file)){
- *    ... // synchronized access to 'file' and all other File instances which equals to 'file'
+ *    ... // synchronized access to 'file' and
+ *        // all other File instances which equal (#equals()) to 'file'
  * }
  * </pre></blockquote>
  * Note, that you don't need to do any release or unlock operations, mutexes which have been requested previously
