@@ -1,7 +1,8 @@
 package org.fs.common;
 
+import org.fs.common.concurrent.EqualObjectsMutex;
+
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Yury Litvinov
@@ -9,26 +10,41 @@ import java.util.concurrent.atomic.AtomicInteger;
 @ThreadSafe
 public class CounterMap<K> {
 
-    private final ConcurrentHashMap<K, AtomicInteger> map = new ConcurrentHashMap<K, AtomicInteger>();
+    private final ConcurrentHashMap<K, Integer> map = new ConcurrentHashMap<K, Integer>();
+    private final EqualObjectsMutex<K> mutexes = new EqualObjectsMutex<K>();
 
     public void increase(K key) {
-        map.putIfAbsent(key, new AtomicInteger(0));
-        AtomicInteger counter = map.get(key);
-        counter.incrementAndGet();
+        synchronized (mutexes.getMutex(key)) {
+            Integer counter = map.get(key);
+            if (counter != null) {
+                map.put(key, counter + 1);
+            } else {
+                map.put(key, 1);
+            }
+        }
     }
 
     public void decrease(K key) {
-        map.putIfAbsent(key, new AtomicInteger(0));
-        AtomicInteger counter = map.get(key);
-        counter.decrementAndGet();
+        synchronized (mutexes.getMutex(key)) {
+            Integer counter = map.get(key);
+            if (counter != null) {
+                if (counter == 1) {
+                    map.remove(key);
+                } else {
+                    map.put(key, counter - 1);
+                }
+            }
+        }
     }
 
-    public int getCount(K key) {
-        AtomicInteger counter = map.get(key);
-        if (counter != null) {
-            return counter.get();
-        } else {
-            return 0;
+    public Integer getCount(K key) {
+        synchronized (mutexes.getMutex(key)) {
+            Integer counter = map.get(key);
+            if (counter != null) {
+                return counter;
+            } else {
+                return 0;
+            }
         }
     }
 }
