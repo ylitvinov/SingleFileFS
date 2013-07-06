@@ -15,7 +15,7 @@ public class ContentionTest {
 
     private static final int NUMBER_OF_THREADS = 100;
     private static final int NUMBER_OF_FILES = 300;
-    private static final int DURATION = 100;
+    private static final int DURATION = 100000;
 
     private final ISingleFileFS fileSystem;
     private final CountDownLatch start = new CountDownLatch(NUMBER_OF_THREADS);
@@ -61,7 +61,7 @@ public class ContentionTest {
                 read(nextRandFile());
                 read(nextRandFile());
                 delete(nextRandFile());
-                flush();
+//                flush();
             }
             end.countDown();
         }
