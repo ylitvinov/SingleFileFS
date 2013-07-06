@@ -14,8 +14,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ContentionTest {
 
     private static final int NUMBER_OF_THREADS = 100;
-    private static final int NUMBER_OF_FILES = 100;
-    private static final int DURATION = 100000;
+    private static final int NUMBER_OF_FILES = 300;
+    private static final int DURATION = 100;
 
     private final ISingleFileFS fileSystem;
     private final CountDownLatch start = new CountDownLatch(NUMBER_OF_THREADS);
@@ -29,10 +29,12 @@ public class ContentionTest {
     }
 
     public void runTest() throws InterruptedException {
+        long startTime = System.currentTimeMillis();
         for (int i = 0; i < NUMBER_OF_THREADS; i++) {
             new Tester().start();
         }
         end.await();
+        System.out.println("Time: " + (System.currentTimeMillis() - startTime) + " ms");
         System.out.println("Successful operations: " + successful.get());
         System.out.println("Errors: " + errors.get());
     }
