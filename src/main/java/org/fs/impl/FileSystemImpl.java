@@ -12,6 +12,8 @@ import org.fs.impl.streams.screening.ScreeningOutputStream;
 import java.io.*;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author Yury Litvinov
@@ -27,7 +29,7 @@ public class FileSystemImpl implements ISingleFileFS {
 
     private final CounterMap<Integer> filesReads = new CounterMap<Integer>();
     private final CounterMap<Integer> filesWrites = new CounterMap<Integer>();
-    private final Object metadataLock = new Object();
+    private final ReadWriteLock metadataLock = new ReentrantReadWriteLock();
     private final EqualObjectsMutex<String> mutexes = new EqualObjectsMutex<String>();
 
     public FileSystemImpl(File file) throws IOException {
@@ -74,8 +76,11 @@ public class FileSystemImpl implements ISingleFileFS {
                 throw new IOException("File '" + fileName + "' already exists");
             }
             int fileId;
-            synchronized (metadataLock) {
+            metadataLock.readLock().lock();
+            try {
                 fileId = fileNamesKeeper.add(fileName);
+            } finally {
+                metadataLock.readLock().unlock();
             }
             filesWrites.increase(fileId);
             return createOutputStream(fileId);
@@ -98,9 +103,12 @@ public class FileSystemImpl implements ISingleFileFS {
             }
 
             // make sure that we don't flush at the moment
-            synchronized (metadataLock) {
+            metadataLock.readLock().lock();
+            try {
                 fileNamesKeeper.remove(fileName);
                 chunksMetadataHandler.releaseChunksForFile(fileId);
+            } finally {
+                metadataLock.readLock().unlock();
             }
         }
     }
@@ -108,7 +116,8 @@ public class FileSystemImpl implements ISingleFileFS {
     @Override
     public void flushMetadata() throws IOException {
         // we don't want any changes being made to metadata during flushing
-        synchronized (metadataLock) {
+        metadataLock.writeLock().lock();
+        try {
             // removing chunks for FileNames structure
             chunksMetadataHandler.releaseChunksForFile(FileNamesKeeper.RESERVED_ID_FOR_FILE_NAMES);
 
@@ -121,6 +130,8 @@ public class FileSystemImpl implements ISingleFileFS {
             ObjectOutputStream metadataOutputStream = createMetadataOutputStream();
             metadataOutputStream.writeObject(chunksMetadataHandler);
             metadataOutputStream.close();
+        } finally {
+            metadataLock.writeLock().unlock();
         }
     }
 
@@ -128,10 +139,13 @@ public class FileSystemImpl implements ISingleFileFS {
         ChunkOutputStream.ChunksAllocator chunksAllocator = new ChunkOutputStream.ChunksAllocator() {
             @Override
             public int allocateNewChunk() {
-                synchronized (metadataLock) {
+                metadataLock.readLock().lock();
+                try {
                     int chunkNumber = chunksMetadataHandler.allocateNewChunkForFile(fileId);
                     randomAccessFile.resizeFileToFitChunk(chunkNumber);
                     return chunkNumber;
+                } finally {
+                    metadataLock.readLock().unlock();
                 }
             }
         };
