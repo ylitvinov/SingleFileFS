@@ -73,7 +73,10 @@ public class FileSystemImpl implements ISingleFileFS {
             if (fileNamesKeeper.hasFile(fileName)) {
                 throw new IOException("File '" + fileName + "' already exists");
             }
-            int fileId = fileNamesKeeper.add(fileName);
+            int fileId;
+            synchronized (metadataLock) {
+                fileId = fileNamesKeeper.add(fileName);
+            }
             filesWrites.increase(fileId);
             return createOutputStream(fileId);
         }
@@ -158,10 +161,10 @@ public class FileSystemImpl implements ISingleFileFS {
 
             @Override
             public synchronized void close() throws IOException {
-                    if (!closed) {
-                        filesReads.decrease(fileId);
-                    }
-                    closed = true;
+                if (!closed) {
+                    filesReads.decrease(fileId);
+                }
+                closed = true;
                 super.close();
             }
         };
