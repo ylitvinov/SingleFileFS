@@ -30,14 +30,25 @@ import java.util.WeakHashMap;
 public class EqualObjectsMutex<T> {
 
     private final WeakHashMap<T, WeakReference<T>> mutexes = new WeakHashMap<T, WeakReference<T>>();
+    private final Object lock = new Object();
 
-    public synchronized Object getMutex(T key) {
+    public Object getMutex(T key) {
         WeakReference reference = mutexes.get(key);
-        Object monitor = reference == null ? null : reference.get();
+        Object monitor = getMonitor(reference);
         if (monitor == null) {
-            monitor = key;
-            mutexes.put(key, new WeakReference<T>(key));
+            synchronized (lock) {
+                monitor = getMonitor(reference);
+                if (monitor == null) {
+                    monitor = key;
+                    mutexes.put(key, new WeakReference<T>(key));
+                }
+                return monitor;
+            }
         }
         return monitor;
+    }
+
+    private Object getMonitor(WeakReference reference) {
+        return reference == null ? null : reference.get();
     }
 }
